@@ -39,11 +39,9 @@ void main() \n \
 ";
 
 
-glm::mat4 get_projection_matrix(float eye_fov, float aspect_ratio, float zNear, float zFar)
+glm::mat4 get_projection_matrix(float fov, float aspect_ratio, float n, float f)
 {
-    // TODO: Use the same projection matrix from the previous assignments
-    float half_fov_arc = glm::radians(eye_fov / 2);
-    float top = zNear * tan(half_fov_arc);
+    float top = n * tan(glm::radians(fov / 2));
     float bottom = -top;
     float right = top * aspect_ratio;
     float left = - right;
@@ -52,22 +50,22 @@ glm::mat4 get_projection_matrix(float eye_fov, float aspect_ratio, float zNear, 
     scale = glm::mat4(
         2 / (right - left), 0, 0, 0,
         0, 2 / (top - bottom), 0, 0,
-        0, 0, 2 / (zNear - zFar), 0,
+        0, 0, 2 / (n - f), 0,
         0, 0, 0, 1
     );
     
     translate = glm::mat4(
         1, 0, 0, -(right + left) / 2,
         0, 1, 0, -(top + bottom) / 2,
-        0, 0, 1, -(zNear + zFar) / 2,
+        0, 0, 1, (n + f) / 2,
         0, 0, 0, 1
     );
 
     perspective = glm::mat4(
-        zNear, 0, 0, 0,
-        0, zNear, 0, 0,
-        0, 0, zNear + zFar, - zNear * zFar,
-        0, 0, 1, 0
+        n, 0, 0, 0,
+        0, n, 0, 0,
+        0, 0, n + f, n * f,
+        0, 0, -1, 0
     );
     
     mirror = glm::mat4(
@@ -77,7 +75,7 @@ glm::mat4 get_projection_matrix(float eye_fov, float aspect_ratio, float zNear, 
         0, 0,  0, 1
     );
 
-    projection =  perspective * translate * scale;
+    projection = perspective * translate * scale;
     return projection;
 
 }
@@ -104,19 +102,18 @@ void render_scene_callback()
         0., 0., 0., 1.
     );
 
-    glm::mat4 projection = glm::perspective(glm::radians(45.0f), 1.78f, 0.1f, 100.0f);
-    // glm::mat4 projection = get_projection_matrix(45.f, 1.78f, 0.1f, 50.f);
+    glm::mat4 projection = get_projection_matrix(45.0f, 1.78f, 0.1f, 100.f);
 
-    // for (int i = 0; i < 4; i++) {
-    //     for (int j = 0; j < 4; j++) {
-    //         std::cout << projection[i][j] << " ";
-    //     }
-    //     std::cout << std::endl;
-    // }
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            std::cout << projection[i][j] << " ";
+        }
+        std::cout << std::endl;
+    }
 
     glUniformMatrix4fv(g_model, 1, GL_TRUE, glm::value_ptr(model));
     glUniformMatrix4fv(g_view, 1, GL_TRUE, glm::value_ptr(view));
-    glUniformMatrix4fv(g_projection, 1, GL_FALSE, glm::value_ptr(projection));
+    glUniformMatrix4fv(g_projection, 1, GL_TRUE, glm::value_ptr(projection));
 
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -133,7 +130,7 @@ void create_vertex_buffer()
 {
     glm::vec3 vertex_list[4];
     vertex_list[0] = glm::vec3(-1., -1., 0.);
-    vertex_list[1] = glm::vec3(0., -1., 0.5);
+    vertex_list[1] = glm::vec3(0., -1., 1.);
     vertex_list[2] = glm::vec3(1., -1., 0.);
     vertex_list[3] = glm::vec3(0., 1., 0.);
 
