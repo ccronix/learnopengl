@@ -104,13 +104,6 @@ void render_scene_callback()
 
     glm::mat4 projection = get_projection_matrix(45.0f, 1.78f, 0.1f, 100.f);
 
-    for (int i = 0; i < 4; i++) {
-        for (int j = 0; j < 4; j++) {
-            std::cout << projection[i][j] << " ";
-        }
-        std::cout << std::endl;
-    }
-
     glUniformMatrix4fv(g_model, 1, GL_TRUE, glm::value_ptr(model));
     glUniformMatrix4fv(g_view, 1, GL_TRUE, glm::value_ptr(view));
     glUniformMatrix4fv(g_projection, 1, GL_TRUE, glm::value_ptr(projection));
