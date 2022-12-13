@@ -76,8 +76,8 @@ glm::mat4 get_projection_matrix(float fov, float aspect_ratio, float n, float f)
     );
 
     projection = perspective * translate * scale;
+    
     return projection;
-
 }
 
 
