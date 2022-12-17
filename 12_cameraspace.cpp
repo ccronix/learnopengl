@@ -1,6 +1,8 @@
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
+#include <cassert>
 #include <iostream>
-#include <assert.h>
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 
@@ -14,29 +16,21 @@ GLuint g_model;
 GLuint g_view;
 GLuint g_projection;
 
-GLchar* vertex_shader = "\
-#version 330 \n \
-layout (location = 0) in vec3 Position; \n \
-uniform mat4 g_model; \n \
-uniform mat4 g_view; \n \
-uniform mat4 g_projection; \n \
-out vec4 color;\n \
-void main() \n \
-{ \n \
-    gl_Position = g_projection * g_view * g_model * vec4(Position, 1.0); \n \
-    color = vec4(clamp(Position, 0.0, 1.0), 1.0);\n \
-} \n \
-";
+char* vertex_shader_path = "../shader/vertex_shader.vs";
+char* fragment_shader_path = "../shader/fragment_shader.fs";
 
-GLchar* fragment_shader = "\
-#version 330 \n \
-in vec4 color;\n \
-out vec4 FragColor; \n \
-void main() \n \
-{ \n \
-    FragColor = color; \n \
-} \n \
-";
+
+GLchar* read_shader_file(char* file_path)
+{
+    FILE* fp = fopen(file_path, "r");
+    assert(fp != NULL);
+    fseek(fp, 0, SEEK_END);
+    int size = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+    GLchar* buffer = (GLchar*) malloc(size * sizeof(GLchar));
+    fread(buffer, sizeof(GLchar), size, fp);
+    return buffer;
+}
 
 
 glm::mat4 get_projection_matrix(float fov, float aspect_ratio, float n, float f)
@@ -208,6 +202,9 @@ void compile_shaders()
         std::cerr << "ERROR create shader program." << std::endl;
         exit(1);
     }
+
+    GLchar* vertex_shader = read_shader_file(vertex_shader_path);
+    GLchar* fragment_shader = read_shader_file(fragment_shader_path);
 
     add_shader(shader_program, vertex_shader, GL_VERTEX_SHADER);
     add_shader(shader_program, fragment_shader, GL_FRAGMENT_SHADER);
