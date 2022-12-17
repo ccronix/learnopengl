@@ -16,8 +16,8 @@ GLuint g_model;
 GLuint g_view;
 GLuint g_projection;
 
-char* vertex_shader_path = "../shader/vertex_shader.vs";
-char* fragment_shader_path = "../shader/fragment_shader.fs";
+char* vertex_shader_path = "../shader/vertex_shader.vert";
+char* fragment_shader_path = "../shader/fragment_shader.frag";
 
 
 GLchar* read_shader_file(char* file_path)
@@ -116,7 +116,7 @@ void render_scene_callback()
     );
 
     glm::mat4 view = get_look_at_matrix(
-        glm::vec3(0., -3., -4.),
+        glm::vec3(0., -2., -4.),
         glm::vec3(0., 0., 0.),
         glm::vec3(0., 1., 0.)
     );
@@ -141,9 +141,9 @@ void render_scene_callback()
 void create_vertex_buffer()
 {
     glm::vec3 vertex_list[4];
-    vertex_list[0] = glm::vec3(-1., -1., 0.);
+    vertex_list[0] = glm::vec3(-1., -1., -0.5);
     vertex_list[1] = glm::vec3(0., -1., 1.);
-    vertex_list[2] = glm::vec3(1., -1., 0.);
+    vertex_list[2] = glm::vec3(1., -1., -0.5);
     vertex_list[3] = glm::vec3(0., 1., 0.);
 
     glGenBuffers(1, & VBO);
