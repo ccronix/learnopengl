@@ -243,7 +243,7 @@ int main(int argc, char* argv[])
 
     glutInitWindowSize(1920, 1080);
     glutInitWindowPosition(0, 0);
-    glutCreateWindow("Index Draw");
+    glutCreateWindow("Camera Space");
 
     glutDisplayFunc(render_scene_callback);
     glutIdleFunc(render_scene_callback);
