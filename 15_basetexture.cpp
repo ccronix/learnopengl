@@ -10,7 +10,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "stb_image.h"
+#include "stb_image.hpp"
 
 #define MOVE_SPEED 0.05f
 #define MOUSE_SPEED 0.05
