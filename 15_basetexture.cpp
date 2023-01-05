@@ -10,6 +10,8 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+#define STB_IMAGE_IMPLEMENTATION
+
 #include "stb_image.hpp"
 
 #define MOVE_SPEED 0.05f
@@ -26,9 +28,10 @@ GLuint TEX;
 GLuint g_model;
 GLuint g_view;
 GLuint g_projection;
+GLuint g_sampler;
 
-char* vertex_shader_path = "../shader/vertex_shader.vert";
-char* fragment_shader_path = "../shader/fragment_shader.frag";
+char* vertex_shader_path = "../shader/vtx_img_shader.vert";
+char* fragment_shader_path = "../shader/frag_img_shader.frag";
 
 bool move_keys[4] = {false, false, false, false};
 
@@ -250,8 +253,11 @@ void render_scene_callback()
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (const GLvoid*) 12);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), 0);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (const GLvoid*) 12);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, TEX);
 
     glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
 
@@ -295,6 +301,7 @@ void create_index_buffer()
 
 void create_texture_buffer(const char* image_path)
 {
+    glUniform1i(g_sampler, 0);
     glGenTextures(1, & TEX);
     glBindTexture(GL_TEXTURE_2D, TEX);
 
@@ -381,6 +388,8 @@ void compile_shaders()
     assert(g_view != 0xFFFFFFFF);
     g_projection = glGetUniformLocation(shader_program, "g_projection");
     assert(g_projection != 0xFFFFFFFF);
+    g_sampler = glGetUniformLocation(shader_program, "g_sampler");
+    assert(g_sampler != 0xFFFFFFFF);
 }
 
 
@@ -410,10 +419,11 @@ int main(int argc, char* argv[])
     glEnable(GL_DEPTH_TEST);
     glClearColor(0., 0., 0., 0.);
 
+    compile_shaders();
+    
     create_vertex_buffer();
     create_index_buffer();
     create_texture_buffer(TEX_PATH);
-    compile_shaders();
 
     glutMainLoop();
     return 0;
