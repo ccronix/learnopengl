@@ -56,8 +56,8 @@ public:
         return *this *= 1 / v;
     }
 
-    Vector3f normalize(Vector3f v ) {
-        return v / v.length(); 
+    Vector3f normalize() {
+        return *this / length(); 
     }
 
     float dot(const Vector3f v) {
@@ -75,7 +75,7 @@ public:
     }
 
     friend std::ostream& operator << (std::ostream &out, const Vector3f v) {
-        return out << v.content[0] << ' ' << v.content[1] << ' ' << v.content[2];
+        return out << "Vector3f(" << v.content[0] << ", " << v.content[1] << ", " << v.content[2] << ")";
     }
 
     friend Vector3f operator + (const Vector3f v1, const Vector3f v2) {
@@ -188,8 +188,8 @@ public:
         float r1 = content[0] * v.content[0];
         float r2 = content[1] * v.content[1];
         float r3 = content[2] * v.content[2];
-        float r3 = content[3] * v.content[3];
-        return r1 + r2 + r3;
+        float r4 = content[3] * v.content[3];
+        return r1 + r2 + r3 + r4;
     }
 
     Vector4f cross(const Vector4f v) {
@@ -199,8 +199,8 @@ public:
         return Vector4f(r1, r2, r3, 1.);
     }
 
-    friend std::ostream& operator << (std::ostream &out, const Vector3f v) {
-        return out << v.content[0] << ' ' << v.content[1] << ' ' << v.content[2] << ' ' << v.content[3];
+    friend std::ostream& operator << (std::ostream &out, const Vector4f v) {
+        return out << "Vector3f(" << v.content[0] << ", " << v.content[1] << ", " << v.content[2] << ", " << v.content[3] << ")";
     }
 
     friend Vector4f operator + (const Vector4f v1, const Vector4f v2) {
