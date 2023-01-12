@@ -36,8 +36,8 @@ struct {
     GLuint intensity;
 } g_parallel_light;
 
-char* vertex_shader_path = "../shader/vtx_lgt_shader.vert";
-char* fragment_shader_path = "../shader/frag_lgt_shader.frag";
+char* vertex_shader_path = "../shader/vtx_diffuse_shader.vert";
+char* fragment_shader_path = "../shader/frag_diffuse_shader.frag";
 
 bool move_keys[4] = {false, false, false, false};
 
