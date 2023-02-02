@@ -17,7 +17,69 @@
             "compilerPath": "C:/Program Files (x86)/Microsoft Visual Studio/2019/Community/VC/Tools/MSVC/14.29.30133/bin/Hostx64/x64/cl.exe",
             "cStandard": "c17",
             "cppStandard": "c++17",
-            "intelliSenseMode": "windows-msvc-x64"
+            "intelliSenseMode": "windows-msvc-x64",
+            "mergeConfigurations": false,
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/**",
+                    "C:/Users/Cronix/Documents/cronix_dev/lib_install/freeglut_3.4_mingw/include",
+                    "C:/Users/Cronix/Documents/cronix_dev/lib_install/glew_2.1_mingw/include",
+                    "C:/Users/Cronix/Documents/cronix_dev/lib_install/glm_0.9.9.5/include"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        },
+        {
+            "name": "MinGW-gcc",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:/Users/Cronix/Documents/cronix_dev/lib_install/freeglut_3.4_mingw/include",
+                "C:/Users/Cronix/Documents/cronix_dev/lib_install/glew_2.1_mingw/include",
+                "C:/Users/Cronix/Documents/cronix_dev/lib_install/glm_0.9.9.5/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "windowsSdkVersion": "10.0.18362.0",
+            "compilerPath": "C:/MinGW_w64/bin/gcc.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-gcc-x64",
+            "mergeConfigurations": false,
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/**"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        },
+        {
+            "name": "MinGW-g++",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:/Users/Cronix/Documents/cronix_dev/lib_install/freeglut_3.4_mingw/include",
+                "C:/Users/Cronix/Documents/cronix_dev/lib_install/glew_2.1_mingw/include",
+                "C:/Users/Cronix/Documents/cronix_dev/lib_install/glm_0.9.9.5/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "windowsSdkVersion": "10.0.18362.0",
+            "compilerPath": "C:/MinGW_w64/bin/g++.exe",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "windows-gcc-x64",
+            "mergeConfigurations": false,
+            "browse": {
+                "path": [
+                    "${workspaceFolder}/**"
+                ],
+                "limitSymbolsToIncludedHeaders": true
+            }
         }
     ],
     "version": 4
