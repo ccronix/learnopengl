@@ -52,7 +52,6 @@ GLuint g_camera_pos;
 GLuint g_specular;
 
 float specular = 1.0f;
-int point_light_num = 2;
 
 char* vertex_shader_path = "../shader/vtx_specular_shader.vert";
 char* fragment_shader_path = "../shader/frag_specular_shader.frag";
@@ -455,9 +454,9 @@ void create_light_uniform_variable()
     glUniform1f(g_specular, specular);
 
     create_point_lights();
-    glUniform1i(g_point_light_num, point_light_num);
+    glUniform1i(g_point_light_num, MAX_POINT_LIGHT);
 
-    for (int i = 0; i < point_light_num; i++) {
+    for (int i = 0; i < MAX_POINT_LIGHT; i++) {
         glUniform3f(g_point_light_list[i].color, point_light_list[i].color.r, point_light_list[i].color.g, point_light_list[i].color.b);
         glUniform3f(g_point_light_list[i].position, point_light_list[i].position.r, point_light_list[i].position.g, point_light_list[i].position.b);
         glUniform1f(g_point_light_list[i].constant, point_light_list[i].constant);
