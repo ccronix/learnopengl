@@ -54,7 +54,7 @@ GLuint g_specular;
 float specular = 1.0f;
 
 char* vertex_shader_path = "../shader/vtx_specular_shader.vert";
-char* fragment_shader_path = "../shader/frag_specular_shader.frag";
+char* fragment_shader_path = "../shader/frag_point_shader.frag";
 
 bool move_keys[4] = {false, false, false, false};
 
@@ -155,16 +155,16 @@ PointLight point_light_list[MAX_POINT_LIGHT] = {
 
 PointLight point_light_a = PointLight(
     glm::vec3(1.0, 1.0, 0.8),
-    glm::vec3(2.0, 1.0, 0.0),
-    1.0,
+    glm::vec3(2.0, 1.0, -2.0),
     0.0,
+    1.0,
     0.0
 );
 
 
 PointLight point_light_b = PointLight(
     glm::vec3(0.8, 1.0, 1.0),
-    glm::vec3(-2.0, 0.5, 1.0),
+    glm::vec3(-2.0, 2.0, 3.0),
     1.0,
     0.5,
     0.3
