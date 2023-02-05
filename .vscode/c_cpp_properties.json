@@ -61,7 +61,8 @@
                 "${workspaceFolder}/**",
                 "C:/Users/Cronix/Documents/cronix_dev/lib_install/freeglut_3.4_mingw/include",
                 "C:/Users/Cronix/Documents/cronix_dev/lib_install/glew_2.1_mingw/include",
-                "C:/Users/Cronix/Documents/cronix_dev/lib_install/glm_0.9.9.5/include"
+                "C:/Users/Cronix/Documents/cronix_dev/lib_install/glm_0.9.9.5/include",
+                "C:/Users/Cronix/Documents/cronix_dev/lib_install/assimp_5.2.5_mingw/include"
             ],
             "defines": [
                 "_DEBUG",
