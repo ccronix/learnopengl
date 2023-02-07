@@ -2,6 +2,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cassert>
+
+#include <vector>
+#include <string>
 #include <iostream>
 #include <GL/glew.h>
 #include <GL/freeglut.h>
@@ -18,19 +21,22 @@
 
 #include "stb_image.hpp"
 
-#define MOVE_SPEED 0.05f
+#define MOVE_SPEED 0.5f
 #define MOUSE_SPEED 0.05
 
 #define SIZE_WIDTH 1920
 #define SIZE_HEIGHT 1080
 
-#define TEX_PATH "texture.png"
-
 #define MAX_POINT_LIGHT 2
 
-GLuint VBO;
-GLuint IBO;
-GLuint TEX;
+#define VERTEX_SHADER "../shader/vtx_specular_shader.vert"
+#define FRAGMENT_SHADER "../shader/frag_point_shader.frag"
+
+#define SCENE_PATH "C:/Users/Cronix/Documents/cronix_dev/mcguire_cg_archive/erato/erato.obj"
+
+// #define LOAD_TEXTURE
+
+
 GLuint g_model;
 GLuint g_view;
 GLuint g_projection;
@@ -57,9 +63,6 @@ GLuint g_specular;
 
 float specular = 1.0f;
 
-char* vertex_shader_path = "../shader/vtx_specular_shader.vert";
-char* fragment_shader_path = "../shader/frag_point_shader.frag";
-
 bool move_keys[4] = {false, false, false, false};
 
 GLfloat pitch = 0.f, yaw = 0.f;
@@ -69,7 +72,7 @@ struct camera {
     glm::vec3 target;
     glm::vec3 up;
 } cam = {
-    glm::vec3(0., 0., 4.), 
+    glm::vec3(0., 18., 60.), 
     glm::vec3(0., 0., -1.), 
     glm::vec3(0., 1., 0.),
 };
@@ -88,6 +91,247 @@ struct vertex {
         normal = nrm;
     }
 };
+
+
+class texture {
+
+public:
+    GLuint TEX;
+    GLuint sampler;
+
+    const char* image_path;
+    unsigned char* content;
+
+    int width;
+    int height;
+    int channels;
+
+    bool loaded;
+
+    texture() { load_default_color(); }
+
+    texture(const char* path, GLuint spl) {
+            image_path = path;
+            sampler = spl;
+            loaded = true;
+            load_image();
+    }
+
+    ~texture() {}
+
+    void load_image()
+    {
+        content = stbi_load(image_path, & width, & height, & channels, 0);
+
+        if (!content) {
+            std::cerr << "[WARNING] can not load image: " << image_path << std::endl;
+            load_default_color();
+            loaded = false;
+        }
+
+        create_texture_buffer();
+    }
+
+    void load_default_color()
+    {
+        width = 1024;
+        height = 1024;
+        channels = 3;
+        content = (unsigned char*) malloc(sizeof(unsigned char) * width * height * channels);
+        memset(content, 128, width * height * channels);
+
+        create_texture_buffer();
+    }   
+
+    void create_texture_buffer()
+    {
+        glUniform1i(sampler, 0);
+        glGenTextures(1, & TEX);
+        glBindTexture(GL_TEXTURE_2D, TEX);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, content);
+        glGenerateMipmap(GL_TEXTURE_2D);
+        set_texture_parameter();
+    }
+
+    void set_texture_parameter()
+    {
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    }
+};
+
+
+class mesh {
+
+public:
+    std::vector<vertex> vertices;
+    std::vector<unsigned int> indices;
+    texture mesh_tex;
+
+    GLuint VBO;
+    GLuint IBO;
+
+    mesh() {}
+
+    mesh(std::vector<vertex> vtxs, std::vector<unsigned int> idxs, texture& tex) 
+    {
+        vertices = vtxs;
+        indices = idxs;
+        mesh_tex = tex;
+
+        create_vertex_buffer();
+        create_index_buffer();
+    }
+
+    void create_vertex_buffer()
+    {
+        int buffer_size = sizeof(vertex) * vertices.size();
+
+        glGenBuffers(1, & VBO);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, buffer_size, &vertices[0], GL_STATIC_DRAW);
+    }
+
+    void create_index_buffer()
+    {
+        int buffer_size = sizeof(unsigned int) * indices.size();
+
+        glGenBuffers(1, & IBO);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, buffer_size, &indices[0], GL_STATIC_DRAW);
+
+    }
+};
+
+
+class scene {
+
+public:
+    std::string scene_path;
+    std::string scene_dir;
+
+    std::vector<mesh> scene_meshes;
+    std::vector<texture> scene_textures;
+
+    scene() {}
+
+    scene(std::string path)
+    {
+        scene_path = path;
+        scene_dir = get_scene_dir();
+
+        load_scene();
+    }
+
+
+    std::string get_scene_dir()
+    {
+        std::string::size_type slash_index = scene_path.find_last_of("/");
+        std::string scene_dir;
+
+        if (slash_index == std::string::npos) {
+            scene_dir = ".";
+        }
+        else if (slash_index == 0) {
+            scene_dir = "/";
+        }
+        else {
+            scene_dir = scene_path.substr(0, slash_index);
+        }
+        return scene_dir;
+    }
+
+    void load_scene()
+    {
+        Assimp::Importer importer;
+
+        const aiScene* scene_ptr = importer.ReadFile(
+            scene_path.c_str(), 
+            aiProcess_Triangulate |
+            aiProcess_GenSmoothNormals | 
+            aiProcess_FlipUVs
+        );
+
+        if (!scene_ptr) {
+            std::cerr << "[ERROR] load scene failed:" << scene_path << std::endl;
+            std::cerr << importer.GetErrorString();
+            exit(1);
+        }
+
+        init_material(scene_ptr);
+        init_scene(scene_ptr);
+    }
+
+    void init_scene(const aiScene* scn)
+    {
+
+        for (int i = 0; i < scn->mNumMeshes; i++) {
+            aiMesh* msh = scn->mMeshes[i];
+            scene_meshes.push_back(init_mesh(msh));
+        }
+    }
+
+    mesh init_mesh(aiMesh* msh)
+    {
+        std::vector<vertex> vertices;
+        aiVector3D default_uv(0., 0., 0.);
+        for (int i = 0; i < msh->mNumVertices; i++) {
+            aiVector3D position = msh->mVertices[i];
+            aiVector3D normal = msh->mNormals[i];
+            aiVector3D uv = msh->HasTextureCoords(0) ? msh->mTextureCoords[0][i] : default_uv;
+
+            vertex vtx(
+                glm::vec3(position.x, position.y, position.z),
+                glm::vec2(uv.x, uv.y),
+                glm::vec3(normal.x, normal.y, normal.z)
+            );
+            vertices.push_back(vtx);
+        }
+        std::vector<unsigned int> indices = init_indices(msh);
+        unsigned int index = msh->mMaterialIndex;
+
+        #ifdef LOAD_TEXTURE
+            texture tex = scene_textures[index];
+        #else
+            texture tex = texture();
+        #endif
+    
+        return mesh(vertices, indices, tex);
+    }
+
+    std::vector<unsigned int> init_indices(aiMesh* mesh)
+    {
+        std::vector<unsigned int> indices;
+        for (int i = 0; i < mesh->mNumFaces; i++) {
+            aiFace face = mesh->mFaces[i];
+            for (int j = 0; j < face.mNumIndices; j++) {
+                indices.push_back(face.mIndices[j]);
+            }
+        }
+
+        return indices;
+    }
+
+    void init_material(const aiScene* scn)
+    {
+        for (int i = 0; i < scn->mNumMaterials; i++) {
+            const aiMaterial* mat = scn->mMaterials[i];
+            if (mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
+                aiString path;
+                if (mat->GetTexture(aiTextureType_DIFFUSE, 0, &path, NULL, NULL, NULL, NULL, NULL) == AI_SUCCESS) {
+                    std::string abs_path = scene_dir + "/" + path.data;
+                    scene_textures.push_back(texture(abs_path.c_str(), g_sampler));
+                }
+            }
+        }
+    }
+};
+
+
+scene base_scene;
 
 
 struct AmbientLight {
@@ -158,8 +402,8 @@ PointLight point_light_list[MAX_POINT_LIGHT] = {
 
 
 PointLight point_light_a = PointLight(
-    glm::vec3(1.0, 1.0, 0.8),
-    glm::vec3(2.0, 1.0, -2.0),
+    glm::vec3(3.0, 4.0, 5.0),
+    glm::vec3(8.0, 25.0, -4.0),
     0.0,
     1.0,
     0.0
@@ -167,10 +411,10 @@ PointLight point_light_a = PointLight(
 
 
 PointLight point_light_b = PointLight(
-    glm::vec3(0.8, 1.0, 1.0),
-    glm::vec3(-2.0, 2.0, 3.0),
+    glm::vec3(4.0, 4.0, 3.0),
+    glm::vec3(-6.0, 30.0, 3.0),
     1.0,
-    0.5,
+    0.6,
     0.3
 );
 
@@ -182,7 +426,7 @@ void create_point_lights()
 }
 
 
-GLchar* read_shader_file(char* file_path)
+GLchar* read_shader_file(const char* file_path)
 {
     FILE* fp = fopen(file_path, "r");
     assert(fp != NULL);
@@ -376,16 +620,20 @@ void render_scene_callback()
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
     glEnableVertexAttribArray(2);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), 0);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (const GLvoid*) 12);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (const GLvoid*) 20);
 
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, TEX);
+    for (int i = 0; i < base_scene.scene_meshes.size(); i++) {
+        mesh msh = base_scene.scene_meshes[i];
+        glBindBuffer(GL_ARRAY_BUFFER, msh.VBO);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), 0);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (const GLvoid*) 12);
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (const GLvoid*) 20);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, msh.IBO);
 
-    glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, msh.mesh_tex.TEX);
 
+        glDrawElements(GL_TRIANGLES, msh.indices.size(), GL_UNSIGNED_INT, 0);
+    }
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
     glDisableVertexAttribArray(2);
@@ -393,39 +641,7 @@ void render_scene_callback()
 }
 
 
-void create_vertex_buffer()
-{
-    vertex vertex_list[4] = {
-        vertex(glm::vec3(-1., -1., -0.5), glm::vec2(0., 0.), glm::vec3(0.801784, -0.267261, -0.534522)),
-        vertex(glm::vec3(0., -1., 1.), glm::vec2(0.5, 0.), glm::vec3(-0.801784, -0.267261, -0.534522)),
-        vertex(glm::vec3(1., -1., -0.5), glm::vec2(1., 0.), glm::vec3(0., -0.242536, 0.970143)),
-        vertex(glm::vec3(0., 1., 0.), glm::vec2(0.5, 1.), glm::vec3(0., 1., 0.))
-    };
-
-    glGenBuffers(1, & VBO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertex_list), vertex_list, GL_STATIC_DRAW);
-
-    std::cout << "[INFO] vertex buffer has been created." << std::endl;
-}
-
-
-void create_index_buffer()
-{
-    unsigned int index_list[12] = {
-        0, 3, 1,
-        1, 3, 2,
-        2, 3, 0,
-        0, 1, 2
-    };
-
-    glGenBuffers(1, & IBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(index_list), index_list, GL_STATIC_DRAW);
-}
-
-
-void create_texture_buffer(const char* image_path)
+void create_texture_buffer(GLuint& TEX, const char* image_path)
 {
     glUniform1i(g_sampler, 0);
     glGenTextures(1, & TEX);
@@ -505,8 +721,8 @@ void compile_shaders()
         exit(1);
     }
 
-    GLchar* vertex_shader = read_shader_file(vertex_shader_path);
-    GLchar* fragment_shader = read_shader_file(fragment_shader_path);
+    GLchar* vertex_shader = read_shader_file(VERTEX_SHADER);
+    GLchar* fragment_shader = read_shader_file(FRAGMENT_SHADER);
 
     add_shader(shader_program, vertex_shader, GL_VERTEX_SHADER);
     add_shader(shader_program, fragment_shader, GL_FRAGMENT_SHADER);
@@ -577,7 +793,7 @@ int main(int argc, char* argv[])
 
     glutInitWindowSize(SIZE_WIDTH, SIZE_HEIGHT);
     glutInitWindowPosition(0, 0);
-    glutCreateWindow("Camera Space");
+    glutCreateWindow("Assimp Model");
     glutSetCursor(GLUT_CURSOR_NONE);
     glutWarpPointer(SIZE_WIDTH / 2, SIZE_HEIGHT / 2);
     
@@ -597,10 +813,9 @@ int main(int argc, char* argv[])
     glClearColor(0., 0., 0., 0.);
 
     compile_shaders();
+
+    base_scene = scene(SCENE_PATH);
     
-    create_vertex_buffer();
-    create_index_buffer();
-    create_texture_buffer(TEX_PATH);
     create_light_uniform_variable();
 
     glutMainLoop();
