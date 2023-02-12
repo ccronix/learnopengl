@@ -34,7 +34,7 @@
 
 #define SCENE_PATH "C:/Users/Cronix/Documents/cronix_dev/mcguire_cg_archive/erato/erato.obj"
 
-// #define LOAD_TEXTURE
+#define LOAD_TEXTURE
 
 
 GLuint g_model;
@@ -169,18 +169,18 @@ class mesh {
 public:
     std::vector<vertex> vertices;
     std::vector<unsigned int> indices;
-    texture mesh_tex;
+    GLuint texture_id;
 
     GLuint VBO;
     GLuint IBO;
 
     mesh() {}
 
-    mesh(std::vector<vertex> vtxs, std::vector<unsigned int> idxs, texture& tex) 
+    mesh(std::vector<vertex> vtxs, std::vector<unsigned int> idxs, GLuint tex_id) 
     {
         vertices = vtxs;
         indices = idxs;
-        mesh_tex = tex;
+        texture_id = tex_id;
 
         create_vertex_buffer();
         create_index_buffer();
@@ -214,7 +214,7 @@ public:
     std::string scene_dir;
 
     std::vector<mesh> scene_meshes;
-    std::vector<texture> scene_textures;
+    // std::vector<texture> scene_textures;
 
     scene() {}
 
@@ -261,7 +261,6 @@ public:
             exit(1);
         }
 
-        init_material(scene_ptr);
         init_scene(scene_ptr);
     }
 
@@ -270,11 +269,11 @@ public:
 
         for (int i = 0; i < scn->mNumMeshes; i++) {
             aiMesh* msh = scn->mMeshes[i];
-            scene_meshes.push_back(init_mesh(msh));
+            scene_meshes.push_back(init_mesh(scn, msh));
         }
     }
 
-    mesh init_mesh(aiMesh* msh)
+    mesh init_mesh(const aiScene* scn, aiMesh* msh)
     {
         std::vector<vertex> vertices;
         aiVector3D default_uv(0., 0., 0.);
@@ -291,15 +290,14 @@ public:
             vertices.push_back(vtx);
         }
         std::vector<unsigned int> indices = init_indices(msh);
-        unsigned int index = msh->mMaterialIndex;
 
         #ifdef LOAD_TEXTURE
-            texture tex = scene_textures[index];
+            texture tex = init_material(scn, msh);
         #else
             texture tex = texture();
         #endif
     
-        return mesh(vertices, indices, tex);
+        return mesh(vertices, indices, tex.TEX);
     }
 
     std::vector<unsigned int> init_indices(aiMesh* mesh)
@@ -315,18 +313,18 @@ public:
         return indices;
     }
 
-    void init_material(const aiScene* scn)
+    texture init_material(const aiScene* scn, aiMesh* msh)
     {
-        for (int i = 0; i < scn->mNumMaterials; i++) {
-            const aiMaterial* mat = scn->mMaterials[i];
-            if (mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
-                aiString path;
-                if (mat->GetTexture(aiTextureType_DIFFUSE, 0, &path, NULL, NULL, NULL, NULL, NULL) == AI_SUCCESS) {
-                    std::string abs_path = scene_dir + "/" + path.data;
-                    scene_textures.push_back(texture(abs_path.c_str(), g_sampler));
-                }
+        texture tex = texture();
+        const aiMaterial* mat = scn->mMaterials[msh->mMaterialIndex];
+        if (mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
+            aiString path;
+            if (mat->GetTexture(aiTextureType_DIFFUSE, 0, &path, NULL, NULL, NULL, NULL, NULL) == AI_SUCCESS) {
+                std::string abs_path = scene_dir + "/" + path.data;
+                tex = texture(abs_path.c_str(), g_sampler);
             }
         }
+        return tex;
     }
 };
 
@@ -630,7 +628,7 @@ void render_scene_callback()
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, msh.IBO);
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, msh.mesh_tex.TEX);
+        glBindTexture(GL_TEXTURE_2D, msh.texture_id);
 
         glDrawElements(GL_TRIANGLES, msh.indices.size(), GL_UNSIGNED_INT, 0);
     }
