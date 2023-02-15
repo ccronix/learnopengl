@@ -7,7 +7,7 @@
 #include <string>
 #include <iostream>
 #include <GL/glew.h>
-#include <GL/freeglut.h>
+#include <GLFW/glfw3.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -31,8 +31,6 @@
 
 #define VERTEX_SHADER "../shader/vtx_specular_shader.vert"
 #define FRAGMENT_SHADER "../shader/frag_point_shader.frag"
-
-#define SCENE_PATH "C:/Users/Cronix/Documents/cronix_dev/mcguire_cg_archive/erato/erato.obj"
 
 #define LOAD_TEXTURE
 
@@ -108,7 +106,7 @@ public:
 
     bool loaded;
 
-    texture() { load_default_color(); }
+    texture() {}
 
     texture(const char* path, GLuint spl) {
             image_path = path;
@@ -214,7 +212,8 @@ public:
     std::string scene_dir;
 
     std::vector<mesh> scene_meshes;
-    // std::vector<texture> scene_textures;
+    
+    texture default_texture;
 
     scene() {}
 
@@ -222,6 +221,7 @@ public:
     {
         scene_path = path;
         scene_dir = get_scene_dir();
+        default_texture.load_default_color();
 
         load_scene();
     }
@@ -294,7 +294,7 @@ public:
         #ifdef LOAD_TEXTURE
             texture tex = init_material(scn, msh);
         #else
-            texture tex = texture();
+            texture tex = default_texture;
         #endif
     
         return mesh(vertices, indices, tex.TEX);
@@ -319,10 +319,9 @@ public:
         const aiMaterial* mat = scn->mMaterials[msh->mMaterialIndex];
         if (mat->GetTextureCount(aiTextureType_DIFFUSE) > 0) {
             aiString path;
-            if (mat->GetTexture(aiTextureType_DIFFUSE, 0, &path, NULL, NULL, NULL, NULL, NULL) == AI_SUCCESS) {
-                std::string abs_path = scene_dir + "/" + path.data;
-                tex = texture(abs_path.c_str(), g_sampler);
-            }
+            mat->GetTexture(aiTextureType_DIFFUSE, 0, &path);
+            std::string abs_path = scene_dir + "/" + path.data;
+            tex = texture(abs_path.c_str(), g_sampler);
         }
         return tex;
     }
@@ -437,83 +436,43 @@ GLchar* read_shader_file(const char* file_path)
 }
 
 
-void keyboard_press_callback(unsigned char key, int mouse_x, int mouse_y)
+void mouse_move_callback(GLFWwindow*& window)
 {
-    switch (key)
-    {
-    case 27:
-        exit(0);
-        break;
-    case 'w':
-        move_keys[0] = true;
-        break;
-    case 's':
-        move_keys[1] = true;
-        break;
-    case 'a':
-        move_keys[2] = true;
-        break;
-    case 'd':
-        move_keys[3] = true;
-        break;
-    default:
-        break;
-    }
-}
+    double mouse_x, mouse_y;
+    glfwGetCursorPos(window, & mouse_x, & mouse_y);
+    glfwSetCursorPos(window, SIZE_WIDTH / 2, SIZE_HEIGHT / 2);
 
-
-void keyboard_release_callback(unsigned char key, int mouse_x, int mouse_y)
-{
-    switch (key)
-    {
-    case 27:
-        exit(0);
-        break;
-    case 'w':
-        move_keys[0] = false;
-        break;
-    case 's':
-        move_keys[1] = false;
-        break;
-    case 'a':
-        move_keys[2] = false;
-        break;
-    case 'd':
-        move_keys[3] = false;
-        break;
-    default:
-        break;
-    }
-}
-
-
-void mouse_move_callback(int mouse_x, int mouse_y)
-{
     yaw += 50 * (mouse_x - SIZE_WIDTH / 2) / (GLfloat) SIZE_WIDTH;
     yaw = glm::mod(yaw + 180.f, 360.f) - 180.f;
 
     pitch += -50 * (mouse_y - SIZE_HEIGHT / 2) / (GLfloat) SIZE_HEIGHT;
     pitch = glm::clamp(pitch, -89.f, 89.f);
-
-    glutWarpPointer(SIZE_WIDTH / 2, SIZE_HEIGHT / 2);
-    glutPostRedisplay();
 }
 
 
-void poll_camera_move()
+void poll_camera_move(GLFWwindow*& window)
 {
-    if (move_keys[0] == true) {
+    mouse_move_callback(window);
+
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+    {
+        glfwTerminate();
+        exit(0);
+    }
+
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
         cam.pos += MOVE_SPEED * cam.target;
     }
-    if (move_keys[1] == true) {
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
         cam.pos -= MOVE_SPEED * cam.target;
     }
-    if (move_keys[2] == true) {
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
         cam.pos -= MOVE_SPEED * glm::normalize(glm::cross(cam.target, cam.up));
     }
-    if (move_keys[3] == true) {
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
         cam.pos += MOVE_SPEED * glm::normalize(glm::cross(cam.target, cam.up));
     }
+
     glm::vec3 direction = glm::vec3(
         cos(glm::radians(pitch)) * sin(glm::radians(yaw)),
         sin(glm::radians(pitch)),
@@ -591,14 +550,14 @@ glm::mat4 get_look_at_matrix(glm::vec3 camera_pos, glm::vec3 target_pos, glm::ve
 }
 
 
-void render_scene_callback()
+void render_scene_callback(GLFWwindow*& window)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     static float scale_value = 0.0;
-    scale_value += 0.01;
+    // scale_value += 0.01;
 
-    poll_camera_move();
+    poll_camera_move(window);
 
     glm::mat4 model = glm::mat4(
         cos(scale_value), 0., - sin(scale_value), 0.,
@@ -632,35 +591,9 @@ void render_scene_callback()
 
         glDrawElements(GL_TRIANGLES, msh.indices.size(), GL_UNSIGNED_INT, 0);
     }
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
-    glDisableVertexAttribArray(2);
-    glutSwapBuffers();
-}
-
-
-void create_texture_buffer(GLuint& TEX, const char* image_path)
-{
-    glUniform1i(g_sampler, 0);
-    glGenTextures(1, & TEX);
-    glBindTexture(GL_TEXTURE_2D, TEX);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    int width, height, channels;
-    unsigned char* content = stbi_load(image_path, & width, & height, & channels, 0);
-
-    if (content) {
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, content);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else {
-        std::cerr << "[ERROR] loading texture failed." << std::endl;
-    }
-    stbi_image_free(content);
+    // glDisableVertexAttribArray(0);
+    // glDisableVertexAttribArray(1);
+    // glDisableVertexAttribArray(2);
 }
 
 
@@ -786,20 +719,13 @@ void compile_shaders()
 
 int main(int argc, char* argv[])
 {
-    glutInit(& argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
+    if (!glfwInit()) exit(EXIT_FAILURE);
 
-    glutInitWindowSize(SIZE_WIDTH, SIZE_HEIGHT);
-    glutInitWindowPosition(0, 0);
-    glutCreateWindow("Assimp Model");
-    glutSetCursor(GLUT_CURSOR_NONE);
-    glutWarpPointer(SIZE_WIDTH / 2, SIZE_HEIGHT / 2);
-    
-    glutKeyboardFunc(keyboard_press_callback);
-    glutPassiveMotionFunc(mouse_move_callback);
-    glutKeyboardUpFunc(keyboard_release_callback);
-    glutDisplayFunc(render_scene_callback);
-    glutIdleFunc(render_scene_callback);
+	// glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	// glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	GLFWwindow* window = glfwCreateWindow(SIZE_WIDTH, SIZE_HEIGHT, "Assimp Model GLFW", NULL, NULL);
+    glfwSetWindowPos(window, 0, 30);
+    glfwMakeContextCurrent(window);
 
     GLenum result = glewInit();
     if (result != GLEW_OK) {
@@ -807,15 +733,27 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    glfwSwapInterval(1);
+	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+
+    glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glClearColor(0., 0., 0., 0.);
 
     compile_shaders();
 
-    base_scene = scene(SCENE_PATH);
+    const char* scene_path = argv[1];
+    base_scene = scene(scene_path);
     
     create_light_uniform_variable();
+    glfwSetCursorPos(window, SIZE_WIDTH / 2, SIZE_HEIGHT / 2);
 
-    glutMainLoop();
+    while (!glfwWindowShouldClose(window)) {
+        render_scene_callback(window);
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+
     return 0;
 }
