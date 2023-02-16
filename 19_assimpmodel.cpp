@@ -150,8 +150,9 @@ private:
         glUniform1i(sampler, 0);
         glGenTextures(1, & TEX);
         glBindTexture(GL_TEXTURE_2D, TEX);
-
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, content);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
         glGenerateMipmap(GL_TEXTURE_2D);
         set_texture_parameter();
     }
