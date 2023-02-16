@@ -62,7 +62,8 @@ GLuint g_camera_pos;
 GLuint g_specular;
 
 float specular = 1.0f;
-
+float this_time, last_time, remain_time, time_count;
+int frame_count;
 
 GLfloat pitch = 0.f, yaw = 0.f;
 
@@ -566,6 +567,23 @@ glm::mat4 get_look_at_matrix(glm::vec3 camera_pos, glm::vec3 target_pos, glm::ve
 }
 
 
+void caculate_fps()
+{
+    this_time = glfwGetTime();
+    float remain_time = this_time - last_time;
+    last_time = this_time;
+    if (time_count < 1.0) {
+        frame_count++;
+        time_count += remain_time;
+    }
+    else {
+        std::cout << "\rFPS: " << frame_count;
+        frame_count = 0;
+        time_count = 0;
+    }
+}
+
+
 void render(GLFWwindow*& window)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -596,7 +614,7 @@ void render(GLFWwindow*& window)
         glBindTexture(GL_TEXTURE_2D, base_scene.scene_meshes[i].TEX);
         glDrawElements(GL_TRIANGLES, base_scene.scene_meshes[i].index_size, GL_UNSIGNED_INT, 0);
     }
-
+    caculate_fps();
     glfwSwapBuffers(window);
     glfwPollEvents();
 }
@@ -730,6 +748,7 @@ int main(int argc, char* argv[])
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_SAMPLES, 8);
 
 	GLFWwindow* window = glfwCreateWindow(SIZE_WIDTH, SIZE_HEIGHT, "Assimp Model GLFW", NULL, NULL);
 
@@ -742,12 +761,13 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    glfwSwapInterval(1);
+    glfwSwapInterval(0);
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
+    glEnable(GL_MULTISAMPLE);
     glClearColor(0., 0., 0., 0.);
 
     compile_shaders();
