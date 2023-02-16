@@ -34,6 +34,8 @@
 
 #define LOAD_TEXTURE
 
+#define glfwMainLoop(w) while (!glfwWindowShouldClose(w)) render(w)
+
 
 GLuint g_model;
 GLuint g_view;
@@ -126,7 +128,6 @@ public:
             load_default_color();
             loaded = false;
         }
-
         create_texture_buffer();
     }
 
@@ -165,26 +166,22 @@ public:
 class mesh {
 
 public:
-    std::vector<vertex> vertices;
-    std::vector<unsigned int> indices;
-    GLuint texture_id;
 
     GLuint VBO;
     GLuint IBO;
+    GLuint TEX;
+    GLuint index_size;
 
     mesh() {}
 
-    mesh(std::vector<vertex> vtxs, std::vector<unsigned int> idxs, GLuint tex_id) 
+    mesh(std::vector<vertex>& vertices, std::vector<unsigned int>& indices, GLuint tex_id) 
     {
-        vertices = vtxs;
-        indices = idxs;
-        texture_id = tex_id;
-
-        create_vertex_buffer();
-        create_index_buffer();
+        create_vertex_buffer(vertices);
+        create_index_buffer(indices);
+        TEX = tex_id;
     }
 
-    void create_vertex_buffer()
+    void create_vertex_buffer(std::vector<vertex>& vertices)
     {
         int buffer_size = sizeof(vertex) * vertices.size();
 
@@ -193,9 +190,10 @@ public:
         glBufferData(GL_ARRAY_BUFFER, buffer_size, &vertices[0], GL_STATIC_DRAW);
     }
 
-    void create_index_buffer()
+    void create_index_buffer(std::vector<unsigned int>& indices)
     {
-        int buffer_size = sizeof(unsigned int) * indices.size();
+        index_size = indices.size();
+        int buffer_size = sizeof(unsigned int) * index_size;
 
         glGenBuffers(1, & IBO);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
@@ -266,7 +264,6 @@ public:
 
     void init_scene(const aiScene* scn)
     {
-
         for (int i = 0; i < scn->mNumMeshes; i++) {
             aiMesh* msh = scn->mMeshes[i];
             scene_meshes.push_back(init_mesh(scn, msh));
@@ -321,6 +318,7 @@ public:
             aiString path;
             mat->GetTexture(aiTextureType_DIFFUSE, 0, &path);
             std::string abs_path = scene_dir + "/" + path.data;
+            std::cout << abs_path << std::endl;
             tex = texture(abs_path.c_str(), g_sampler);
         }
         return tex;
@@ -550,7 +548,7 @@ glm::mat4 get_look_at_matrix(glm::vec3 camera_pos, glm::vec3 target_pos, glm::ve
 }
 
 
-void render_scene_callback(GLFWwindow*& window)
+void render(GLFWwindow*& window)
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -566,7 +564,7 @@ void render_scene_callback(GLFWwindow*& window)
         0., 0., 0., 1.
     );
     glm::mat4 view = get_look_at_matrix(cam.pos, cam.pos + cam.target, cam.up);
-    glm::mat4 projection = get_projection_matrix(45.0f, 1.78f, 0.1f, 100.f);
+    glm::mat4 projection = get_projection_matrix(45.0f, 1.78f, 0.1f, 1000.f);
 
     glUniform3f(g_camera_pos, cam.pos.r, cam.pos.g, cam.pos.b);
 
@@ -579,21 +577,23 @@ void render_scene_callback(GLFWwindow*& window)
     glEnableVertexAttribArray(2);
 
     for (int i = 0; i < base_scene.scene_meshes.size(); i++) {
-        mesh msh = base_scene.scene_meshes[i];
-        glBindBuffer(GL_ARRAY_BUFFER, msh.VBO);
+        glBindBuffer(GL_ARRAY_BUFFER, base_scene.scene_meshes[i].VBO);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), 0);
         glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (const GLvoid*) 12);
         glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (const GLvoid*) 20);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, msh.IBO);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, base_scene.scene_meshes[i].IBO);
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, msh.texture_id);
+        glBindTexture(GL_TEXTURE_2D, base_scene.scene_meshes[i].TEX);
 
-        glDrawElements(GL_TRIANGLES, msh.indices.size(), GL_UNSIGNED_INT, 0);
+        glDrawElements(GL_TRIANGLES, base_scene.scene_meshes[i].index_size, GL_UNSIGNED_INT, 0);
     }
-    // glDisableVertexAttribArray(0);
-    // glDisableVertexAttribArray(1);
-    // glDisableVertexAttribArray(2);
+    glDisableVertexAttribArray(0);
+    glDisableVertexAttribArray(1);
+    glDisableVertexAttribArray(2);
+
+    glfwSwapBuffers(window);
+    glfwPollEvents();
 }
 
 
@@ -723,7 +723,9 @@ int main(int argc, char* argv[])
 
 	// glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	// glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+
 	GLFWwindow* window = glfwCreateWindow(SIZE_WIDTH, SIZE_HEIGHT, "Assimp Model GLFW", NULL, NULL);
+
     glfwSetWindowPos(window, 0, 30);
     glfwMakeContextCurrent(window);
 
@@ -749,11 +751,7 @@ int main(int argc, char* argv[])
     create_light_uniform_variable();
     glfwSetCursorPos(window, SIZE_WIDTH / 2, SIZE_HEIGHT / 2);
 
-    while (!glfwWindowShouldClose(window)) {
-        render_scene_callback(window);
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    }
+    glfwMainLoop(window);
 
     return 0;
 }
