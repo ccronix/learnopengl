@@ -170,8 +170,7 @@ class mesh {
 
 public:
 
-    GLuint VBO;
-    GLuint IBO;
+    GLuint VAO;
     GLuint TEX;
     GLuint index_size;
 
@@ -179,25 +178,40 @@ public:
 
     mesh(std::vector<vertex>& vertices, std::vector<unsigned int>& indices, GLuint tex_id) 
     {
+        create_vertex_array();
         create_vertex_buffer(vertices);
         create_index_buffer(indices);
         TEX = tex_id;
     }
 
+    void create_vertex_array()
+    {
+        glGenVertexArrays(1, & VAO);
+        glBindVertexArray(VAO);
+    }
+
     void create_vertex_buffer(std::vector<vertex>& vertices)
     {
         int buffer_size = sizeof(vertex) * vertices.size();
-
+        GLuint VBO;
         glGenBuffers(1, & VBO);
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBufferData(GL_ARRAY_BUFFER, buffer_size, &vertices[0], GL_STATIC_DRAW);
+
+        glEnableVertexAttribArray(0);
+        glEnableVertexAttribArray(1);
+        glEnableVertexAttribArray(2);
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), 0);
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (const GLvoid*) 12);
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (const GLvoid*) 20);
     }
 
     void create_index_buffer(std::vector<unsigned int>& indices)
     {
         index_size = indices.size();
         int buffer_size = sizeof(unsigned int) * index_size;
-
+        GLuint IBO;
         glGenBuffers(1, & IBO);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, IBO);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, buffer_size, &indices[0], GL_STATIC_DRAW);
@@ -230,7 +244,7 @@ public:
 
     std::string get_scene_dir()
     {
-        std::string::size_type slash_index = scene_path.find_last_of("/");
+        std::string::size_type slash_index = scene_path.find_last_of("/\\");
         std::string scene_dir;
 
         if (slash_index == std::string::npos) {
@@ -575,25 +589,12 @@ void render(GLFWwindow*& window)
     glUniformMatrix4fv(g_view, 1, GL_TRUE, glm::value_ptr(view));
     glUniformMatrix4fv(g_projection, 1, GL_TRUE, glm::value_ptr(projection));
 
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-    glEnableVertexAttribArray(2);
-
     for (int i = 0; i < base_scene.scene_meshes.size(); i++) {
-        glBindBuffer(GL_ARRAY_BUFFER, base_scene.scene_meshes[i].VBO);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), 0);
-        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (const GLvoid*) 12);
-        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(vertex), (const GLvoid*) 20);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, base_scene.scene_meshes[i].IBO);
-
         glActiveTexture(GL_TEXTURE0);
+        glBindVertexArray(base_scene.scene_meshes[i].VAO);
         glBindTexture(GL_TEXTURE_2D, base_scene.scene_meshes[i].TEX);
-
         glDrawElements(GL_TRIANGLES, base_scene.scene_meshes[i].index_size, GL_UNSIGNED_INT, 0);
     }
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
-    glDisableVertexAttribArray(2);
 
     glfwSwapBuffers(window);
     glfwPollEvents();
@@ -724,12 +725,14 @@ int main(int argc, char* argv[])
 {
     if (!glfwInit()) exit(EXIT_FAILURE);
 
-	// glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	// glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
 	GLFWwindow* window = glfwCreateWindow(SIZE_WIDTH, SIZE_HEIGHT, "Assimp Model GLFW", NULL, NULL);
 
-    glfwSetWindowPos(window, 0, 30);
+    glfwSetWindowPos(window, 0, 25);
     glfwMakeContextCurrent(window);
 
     GLenum result = glewInit();
