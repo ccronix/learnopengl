@@ -63,7 +63,6 @@ GLuint g_specular;
 
 float specular = 1.0f;
 
-bool move_keys[4] = {false, false, false, false};
 
 GLfloat pitch = 0.f, yaw = 0.f;
 
@@ -71,7 +70,10 @@ struct camera {
     glm::vec3 pos;
     glm::vec3 target;
     glm::vec3 up;
-} cam = {
+};
+
+
+camera cam = {
     glm::vec3(0., 18., 60.), 
     glm::vec3(0., 0., -1.), 
     glm::vec3(0., 1., 0.),
@@ -102,12 +104,6 @@ public:
     const char* image_path;
     unsigned char* content;
 
-    int width;
-    int height;
-    int channels;
-
-    bool loaded;
-
     texture() {}
 
     texture(const char* path, GLuint spl) {
@@ -119,6 +115,24 @@ public:
 
     ~texture() {}
 
+    void load_default_color()
+    {
+        width = 1024;
+        height = 1024;
+        channels = 3;
+        content = (unsigned char*) malloc(sizeof(unsigned char) * width * height * channels);
+        memset(content, 128, width * height * channels);
+
+        create_texture_buffer();
+    }  
+
+private:
+    int width;
+    int height;
+    int channels;
+
+    bool loaded;
+
     void load_image()
     {
         content = stbi_load(image_path, & width, & height, & channels, 0);
@@ -129,18 +143,7 @@ public:
             loaded = false;
         }
         create_texture_buffer();
-    }
-
-    void load_default_color()
-    {
-        width = 1024;
-        height = 1024;
-        channels = 3;
-        content = (unsigned char*) malloc(sizeof(unsigned char) * width * height * channels);
-        memset(content, 128, width * height * channels);
-
-        create_texture_buffer();
-    }   
+    } 
 
     void create_texture_buffer()
     {
