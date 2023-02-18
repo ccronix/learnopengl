@@ -146,13 +146,26 @@ private:
         create_texture_buffer();
     } 
 
+    GLenum get_image_format_type(int channels)
+    {
+        switch (channels)
+        {
+            case 1: return GL_RED;
+            case 3: return GL_RGB;
+            case 4: return GL_RGBA;
+            default: return GL_RGB;
+        }
+    }
+
     void create_texture_buffer()
     {
+        GLenum format = get_image_format_type(channels);
+
         glUniform1i(sampler, 0);
         glGenTextures(1, & TEX);
         glBindTexture(GL_TEXTURE_2D, TEX);
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, content);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, content);
         glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
         glGenerateMipmap(GL_TEXTURE_2D);
         set_texture_parameter();
