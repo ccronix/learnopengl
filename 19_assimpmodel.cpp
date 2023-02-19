@@ -361,6 +361,83 @@ public:
 scene base_scene;
 
 
+class shader {
+
+public:
+
+    GLuint program;
+
+    shader() {}
+    
+    shader(std::string vtx_path, std::string frag_path) {
+        vertex_shader_path = vtx_path;
+        fragment_shader_path = frag_path;
+        program = glCreateProgram();
+
+        GLuint vertex_shader = create_shader(vertex_shader_path, GL_VERTEX_SHADER);
+        GLuint fragment_shader = create_shader(fragment_shader_path, GL_FRAGMENT_SHADER);
+        glAttachShader(program, vertex_shader);
+        glAttachShader(program, fragment_shader);
+        glLinkProgram(program);
+        glDeleteShader(vertex_shader);
+        glDeleteShader(fragment_shader);
+    }
+
+    void set() { glUseProgram(program); }
+
+    void unset() { glUseProgram(0); }
+
+private:
+
+    std::string vertex_shader_path;
+    std::string fragment_shader_path;
+
+    inline static GLchar* read_text_file(const char* file_path)
+    {
+        FILE* fp = fopen(file_path, "r");
+        assert(fp != NULL);
+        fseek(fp, 0, SEEK_END);
+        int size = ftell(fp);
+        fseek(fp, 0, SEEK_SET);
+        GLchar* buffer = (GLchar*) malloc(size * sizeof(GLchar));
+        fread(buffer, sizeof(GLchar), size, fp);
+        return buffer;
+    }
+
+    inline static bool validate(GLuint& object, GLenum type)
+    {
+        GLint status;
+        glGetShaderiv(object, type, &status);
+        if (!status) {
+            GLchar error[1024];
+            glGetShaderInfoLog(object, 1024, NULL, error);
+            std::cerr << "[ERROR] " << error << std::endl;
+            return 0;
+        }
+        else {
+            return 1;
+        }
+    }
+
+    GLuint create_shader(std::string shader_path, GLenum shader_type) 
+    {
+        GLuint shader = glCreateShader(shader_type);
+        GLchar* code_text = read_text_file(shader_path.c_str());
+        glShaderSource(shader, 1, &code_text, NULL);
+        glCompileShader(shader);
+
+        if (!validate(shader, GL_COMPILE_STATUS)) {
+            exit(1);
+        }
+        else {
+            free(code_text);
+        }
+
+        return shader;
+    }
+};
+
+
 struct AmbientLight {
     glm::vec3 color;
     float intensity;
@@ -653,65 +730,8 @@ void create_light_uniform_variable()
 }
 
 
-void add_shader(GLuint shader_program, char* shader_text, GLenum shader_type)
+void transfer_data(GLuint shader_program)
 {
-    GLuint shader_obj = glCreateShader(shader_type);
-    if (shader_obj == 0) {
-        std::cerr << "ERROR create shader: " << shader_type << std::endl;
-        exit(1);
-    }
-
-    GLchar* program[1];
-    program[0] = shader_text;
-    GLint lengths[1];
-    lengths[0] = strlen(shader_text);
-    glShaderSource(shader_obj, 1, program, lengths);
-    glCompileShader(shader_obj);
-
-    GLint success;
-    glGetShaderiv(shader_obj, GL_COMPILE_STATUS, & success);
-    if (! success) {
-        GLchar info[1024];
-        glGetShaderInfoLog(shader_obj, 1024, NULL, info);
-        std::cerr << info << std::endl;
-        exit(1);
-    }
-
-    glAttachShader(shader_program, shader_obj);
-}
-
-void compile_shaders()
-{
-    GLuint shader_program = glCreateProgram();
-    if (shader_program == 0) {
-        std::cerr << "ERROR create shader program." << std::endl;
-        exit(1);
-    }
-
-    GLchar* vertex_shader = read_shader_file(VERTEX_SHADER);
-    GLchar* fragment_shader = read_shader_file(FRAGMENT_SHADER);
-
-    add_shader(shader_program, vertex_shader, GL_VERTEX_SHADER);
-    add_shader(shader_program, fragment_shader, GL_FRAGMENT_SHADER);
-
-    GLint success = 0;
-    GLchar error[1024] = {0};
-    glLinkProgram(shader_program);
-    glGetProgramiv(shader_program, GL_LINK_STATUS, & success);
-    if (success == 0) {
-        glGetProgramInfoLog(shader_program, sizeof(error), NULL, error);
-        std::cerr << "ERROR linking shader program: " << error << std::endl;
-        exit(1);
-    }
-
-    glValidateProgram(shader_program);
-    glGetProgramiv(shader_program, GL_VALIDATE_STATUS, & success);
-    if (! success) {
-        glGetProgramInfoLog(shader_program, sizeof(error), NULL, error);
-        std::cerr << "ERROR invalid shader program: " << error << std::endl;
-        exit(1);
-    }
-    glUseProgram(shader_program);
     g_model = glGetUniformLocation(shader_program, "g_model");
     assert(g_model != 0xFFFFFFFF);
     g_view = glGetUniformLocation(shader_program, "g_view");
@@ -783,7 +803,9 @@ int main(int argc, char* argv[])
     glEnable(GL_MULTISAMPLE);
     glClearColor(0., 0., 0., 0.);
 
-    compile_shaders();
+    shader pipeline = shader(VERTEX_SHADER, FRAGMENT_SHADER);
+    pipeline.set();
+    transfer_data(pipeline.program);
 
     const char* scene_path = argv[1];
     base_scene = scene(scene_path);
